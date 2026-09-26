@@ -43,7 +43,7 @@ func main() {
 	catalogRepo := repository.NewCatalogRepository(db)
 	authSvc := service.NewAuthService(userRepo, cfg.JWTSecret, log)
 	patientSvc := service.NewPatientService(patientRepo, log)
-	recordSvc := service.NewRecordService(recordRepo, patientRepo, departmentRepo, log)
+	recordSvc := service.NewRecordService(recordRepo, patientRepo, departmentRepo, catalogRepo, log)
 	orderSvc := service.NewOrderService(orderRepo, recordRepo, log)
 	presSvc := service.NewPrescriptionService(presRepo, recordRepo, log)
 	deptSvc := service.NewDepartmentService(departmentRepo, log)
@@ -67,8 +67,16 @@ func main() {
 	}
 }
 func migrateAndSeed(db *gorm.DB) error {
+	// 模板改为按 (name, version) 复合唯一索引管理多版本，移除旧版单字段唯一索引。
+	if e := db.Exec("DROP INDEX IF EXISTS idx_record_templates_name").Error; e != nil {
+		return fmt.Errorf("drop legacy template name index: %w", e)
+	}
 	if e := db.AutoMigrate(&model.Department{}, &model.User{}, &model.Patient{}, &model.MedicalRecord{}, &model.RecordChangeRequest{}, &model.MedicalOrder{}, &model.Prescription{}, &model.PrescriptionItem{}, &model.Drug{}, &model.DiagnosisCode{}, &model.RecordTemplate{}, &model.AuditLog{}); e != nil {
 		return e
+	}
+	// 升级前已存在的病历没有模板快照，回填为非空值，保证历史病历查询兼容。
+	if e := db.Exec("UPDATE medical_records SET template_name = COALESCE(template_name, ''), template_content = COALESCE(template_content, ''), template_version = COALESCE(template_version, 0) WHERE template_name IS NULL OR template_content IS NULL OR template_version IS NULL").Error; e != nil {
+		return fmt.Errorf("backfill record template snapshot: %w", e)
 	}
 	var count int64
 	db.Model(&model.Department{}).Count(&count)
@@ -99,5 +107,5 @@ func migrateAndSeed(db *gorm.DB) error {
 	if e := db.Create(&users).Error; e != nil {
 		return e
 	}
-	return db.Create(&[]model.RecordTemplate{{Name: "门诊初诊模板", RecordType: "outpatient", Content: "主诉：\n现病史：\n诊断：\n治疗方案："}, {Name: "住院病历模板", RecordType: "inpatient", Content: "入院记录：\n体格检查：\n辅助检查：\n诊断："}}).Error
+	return db.Create(&[]model.RecordTemplate{{Name: "门诊初诊模板", RecordType: "outpatient", Version: 1, Content: "主诉：\n现病史：\n诊断：\n治疗方案："}, {Name: "住院病历模板", RecordType: "inpatient", Version: 1, Content: "入院记录：\n体格检查：\n辅助检查：\n诊断："}}).Error
 }

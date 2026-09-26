@@ -25,6 +25,7 @@ type RecordInput struct {
 	Diagnosis      string `json:"diagnosis" validate:"required"`
 	TreatmentPlan  string `json:"treatment_plan"`
 	RichContent    string `json:"rich_content"`
+	TemplateID     *uint  `json:"template_id"`
 }
 type OrderInput struct {
 	MedicalRecordID uint   `json:"medical_record_id" validate:"required"`

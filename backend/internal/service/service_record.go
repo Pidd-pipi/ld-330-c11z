@@ -14,11 +14,12 @@ type RecordService struct {
 	repo        repository.RecordRepository
 	patients    repository.PatientRepository
 	departments repository.DepartmentRepository
+	catalog     repository.CatalogRepository
 	logger      *slog.Logger
 }
 
-func NewRecordService(r repository.RecordRepository, p repository.PatientRepository, d repository.DepartmentRepository, l *slog.Logger) *RecordService {
-	return &RecordService{r, p, d, l}
+func NewRecordService(r repository.RecordRepository, p repository.PatientRepository, d repository.DepartmentRepository, c repository.CatalogRepository, l *slog.Logger) *RecordService {
+	return &RecordService{r, p, d, c, l}
 }
 func (s *RecordService) Create(in dto.RecordInput, doctorID uint) (*model.MedicalRecord, error) {
 	if _, e := s.patients.FindByID(in.PatientID); e != nil {
@@ -28,6 +29,16 @@ func (s *RecordService) Create(in dto.RecordInput, doctorID uint) (*model.Medica
 		return nil, fmt.Errorf("validate department: %w", e)
 	}
 	v := &model.MedicalRecord{PatientID: in.PatientID, DoctorID: doctorID, DepartmentID: in.DepartmentID, RecordType: in.RecordType, ChiefComplaint: in.ChiefComplaint, PresentIllness: in.PresentIllness, PastHistory: in.PastHistory, PhysicalExam: in.PhysicalExam, AuxiliaryExam: in.AuxiliaryExam, Diagnosis: in.Diagnosis, TreatmentPlan: in.TreatmentPlan, RichContent: in.RichContent, Status: "draft"}
+	// 快照当时选用的模板名称、版本号与模板原文，之后模板再更新也不影响本病历。
+	if in.TemplateID != nil {
+		t, e := s.catalog.FindTemplateByID(*in.TemplateID)
+		if e != nil {
+			return nil, fmt.Errorf("validate template: %w", e)
+		}
+		v.TemplateName = t.Name
+		v.TemplateVersion = t.Version
+		v.TemplateContent = t.Content
+	}
 	if e := s.repo.Create(v); e != nil {
 		return nil, fmt.Errorf("create record service: %w", e)
 	}

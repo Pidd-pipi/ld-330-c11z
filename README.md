@@ -40,6 +40,7 @@ docker compose down
 - **审签和留痕**：JWT 登录与管理员/医生/护士 RBAC；病历审核、审签归档与归档后的修改申请；关键创建动作写入审计日志。
 - **检索与报表**：患者、科室、医生、日期、关键词多维病历检索；科室工作量与疾病谱报表。
 - **系统管理**：管理员维护科室、账号、药品字典、ICD-10 诊断编码、病历模板库和操作审计。
+- **模板版本追溯**：模板每次更新生成递增新版本，历史版本与更新时间可查阅；病历保存时记录模板名称、版本号与当时模板原文，医生选择时只见各模板最新版，已归档病历内容不受模板更新影响。
 
 ## 技术栈
 
@@ -90,12 +91,13 @@ npm run build
 
 - `POST /auth/login`：登录；`GET /auth/me`：当前用户。
 - `GET|POST|PUT /patients`：患者查询、创建和更新。
-- `GET|POST /records`、`GET /records/:id`：病历检索、创建、详情。
+- `GET|POST /records`、`GET /records/:id`：病历检索、创建、详情（创建时可传 `template_id`，病历将快照模板名称、版本号与当时模板原文）。
 - `POST /records/:id/review`、`POST /records/:id/change-requests`：审核/归档和归档修改申请。
+- `GET /templates`：各病历模板的最新版本（医生书写病历时选择）。
 - `POST /orders`、`GET /records/:id/orders`、`PUT /orders/:id/status`：医嘱。
 - `POST /prescriptions`、`GET /records/:id/prescriptions`、`PUT /prescriptions/:id/status`：电子处方。
 - `GET /reports/department-workload`、`GET /reports/disease-spectrum`：统计报表。
-- `/admin/*`：科室、账号、药品、ICD-10、模板、审计日志（管理员）。
+- `/admin/*`：科室、账号、药品、ICD-10、审计日志（管理员）；`GET /admin/templates` 返回模板全部历史版本，`POST /admin/templates` 新建模板（v1），`PUT /admin/templates/:id` 发布递增新版本。
 
 OpenAPI 摘要见 [`backend/api/openapi.yaml`](backend/api/openapi.yaml)。
 

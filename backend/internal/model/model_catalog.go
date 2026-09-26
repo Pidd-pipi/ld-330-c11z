@@ -17,10 +17,13 @@ type DiagnosisCode struct {
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 }
+
+// RecordTemplate 每次更新都会插入一行新版本，同名模板按 Version 递增，历史版本永不改写。
 type RecordTemplate struct {
 	ID         uint      `gorm:"primaryKey" json:"id"`
-	Name       string    `gorm:"uniqueIndex;size:128;not null" json:"name"`
+	Name       string    `gorm:"uniqueIndex:idx_template_name_version;size:128;not null" json:"name"`
 	RecordType string    `gorm:"size:20;not null" json:"record_type"`
+	Version    int       `gorm:"uniqueIndex:idx_template_name_version;not null;default:1" json:"version"`
 	Content    string    `gorm:"type:text" json:"content"`
 	CreatedAt  time.Time `json:"created_at"`
 	UpdatedAt  time.Time `json:"updated_at"`
