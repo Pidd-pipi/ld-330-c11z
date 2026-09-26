@@ -36,6 +36,7 @@ docker compose down
 
 - **患者档案**：唯一档案编号；完整的基础信息、过敏史和既往病史；可按姓名、身份证号、手机号检索。
 - **结构化病历**：门诊/住院类型，包含主诉、现病史、既往史、检查、诊断、方案和富文本补充内容；以时间线展示。
+- **模板版本化**：病历模板每次修改生成新版本，历史版本内容可追溯；病历保存时快照模板名称、版本号和当时的模板文字，归档病历不随模板更新变化；医生书写时只见各模板最新版。
 - **医嘱与处方**：长期/临时医嘱；电子处方包含药品、规格、剂量、频次、疗程，并跟踪待审核、已审核、已执行状态。
 - **审签和留痕**：JWT 登录与管理员/医生/护士 RBAC；病历审核、审签归档与归档后的修改申请；关键创建动作写入审计日志。
 - **检索与报表**：患者、科室、医生、日期、关键词多维病历检索；科室工作量与疾病谱报表。
@@ -95,7 +96,8 @@ npm run build
 - `POST /orders`、`GET /records/:id/orders`、`PUT /orders/:id/status`：医嘱。
 - `POST /prescriptions`、`GET /records/:id/prescriptions`、`PUT /prescriptions/:id/status`：电子处方。
 - `GET /reports/department-workload`、`GET /reports/disease-spectrum`：统计报表。
-- `/admin/*`：科室、账号、药品、ICD-10、模板、审计日志（管理员）。
+- `GET /templates`：病历模板选项（各模板最新版，供医生书写时选择）。
+- `/admin/*`：科室、账号、药品、ICD-10、审计日志（管理员）；`GET|POST /admin/templates`、`PUT /admin/templates/:id`：模板列表（含历史版本）、新建模板、发布新版本。
 
 OpenAPI 摘要见 [`backend/api/openapi.yaml`](backend/api/openapi.yaml)。
 

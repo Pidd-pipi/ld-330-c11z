@@ -43,7 +43,7 @@ func main() {
 	catalogRepo := repository.NewCatalogRepository(db)
 	authSvc := service.NewAuthService(userRepo, cfg.JWTSecret, log)
 	patientSvc := service.NewPatientService(patientRepo, log)
-	recordSvc := service.NewRecordService(recordRepo, patientRepo, departmentRepo, log)
+	recordSvc := service.NewRecordService(recordRepo, patientRepo, departmentRepo, catalogRepo, log)
 	orderSvc := service.NewOrderService(orderRepo, recordRepo, log)
 	presSvc := service.NewPrescriptionService(presRepo, recordRepo, log)
 	deptSvc := service.NewDepartmentService(departmentRepo, log)
@@ -67,8 +67,19 @@ func main() {
 	}
 }
 func migrateAndSeed(db *gorm.DB) error {
-	if e := db.AutoMigrate(&model.Department{}, &model.User{}, &model.Patient{}, &model.MedicalRecord{}, &model.RecordChangeRequest{}, &model.MedicalOrder{}, &model.Prescription{}, &model.PrescriptionItem{}, &model.Drug{}, &model.DiagnosisCode{}, &model.RecordTemplate{}, &model.AuditLog{}); e != nil {
+	if e := db.AutoMigrate(&model.Department{}, &model.User{}, &model.Patient{}, &model.MedicalRecord{}, &model.RecordChangeRequest{}, &model.MedicalOrder{}, &model.Prescription{}, &model.PrescriptionItem{}, &model.Drug{}, &model.DiagnosisCode{}, &model.RecordTemplate{}, &model.RecordTemplateVersion{}, &model.AuditLog{}); e != nil {
 		return e
+	}
+	// 兼容旧库：把 record_templates.content 迁移为各模板的第 1 版，保证在用的模板升级后仍可追溯、可继续选用。
+	if db.Migrator().HasColumn(&model.RecordTemplate{}, "content") {
+		if e := db.Exec(`INSERT INTO record_template_versions (template_id, version, content, created_at)
+			SELECT t.id, 1, t.content, COALESCE(t.updated_at, CURRENT_TIMESTAMP) FROM record_templates t
+			WHERE NOT EXISTS (SELECT 1 FROM record_template_versions v WHERE v.template_id = t.id)`).Error; e != nil {
+			return fmt.Errorf("migrate legacy template content: %w", e)
+		}
+		if e := db.Exec(`ALTER TABLE record_templates DROP COLUMN content`).Error; e != nil {
+			return fmt.Errorf("drop legacy template content column: %w", e)
+		}
 	}
 	var count int64
 	db.Model(&model.Department{}).Count(&count)
@@ -99,5 +110,8 @@ func migrateAndSeed(db *gorm.DB) error {
 	if e := db.Create(&users).Error; e != nil {
 		return e
 	}
-	return db.Create(&[]model.RecordTemplate{{Name: "门诊初诊模板", RecordType: "outpatient", Content: "主诉：\n现病史：\n诊断：\n治疗方案："}, {Name: "住院病历模板", RecordType: "inpatient", Content: "入院记录：\n体格检查：\n辅助检查：\n诊断："}}).Error
+	return db.Create(&[]model.RecordTemplate{
+		{Name: "门诊初诊模板", RecordType: "outpatient", Versions: []model.RecordTemplateVersion{{Version: 1, Content: "主诉：\n现病史：\n诊断：\n治疗方案："}}},
+		{Name: "住院病历模板", RecordType: "inpatient", Versions: []model.RecordTemplateVersion{{Version: 1, Content: "入院记录：\n体格检查：\n辅助检查：\n诊断："}}},
+	}).Error
 }

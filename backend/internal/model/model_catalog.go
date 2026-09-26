@@ -17,13 +17,24 @@ type DiagnosisCode struct {
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 }
+
+// RecordTemplate 是模板主体，内容按版本存放在 RecordTemplateVersion 中，
+// 每次修改只新增版本行，历史版本不可变，便于病历追溯当时使用的模板文字。
 type RecordTemplate struct {
-	ID         uint      `gorm:"primaryKey" json:"id"`
-	Name       string    `gorm:"uniqueIndex;size:128;not null" json:"name"`
-	RecordType string    `gorm:"size:20;not null" json:"record_type"`
-	Content    string    `gorm:"type:text" json:"content"`
-	CreatedAt  time.Time `json:"created_at"`
-	UpdatedAt  time.Time `json:"updated_at"`
+	ID         uint                    `gorm:"primaryKey" json:"id"`
+	Name       string                  `gorm:"uniqueIndex;size:128;not null" json:"name"`
+	RecordType string                  `gorm:"size:20;not null" json:"record_type"`
+	Versions   []RecordTemplateVersion `gorm:"foreignKey:TemplateID;constraint:OnDelete:CASCADE" json:"versions"`
+	CreatedAt  time.Time               `json:"created_at"`
+	UpdatedAt  time.Time               `json:"updated_at"`
+}
+type RecordTemplateVersion struct {
+	ID         uint            `gorm:"primaryKey" json:"id"`
+	TemplateID uint            `gorm:"uniqueIndex:idx_template_version;not null" json:"template_id"`
+	Template   *RecordTemplate `gorm:"foreignKey:TemplateID" json:"template,omitempty"`
+	Version    int             `gorm:"uniqueIndex:idx_template_version;not null" json:"version"`
+	Content    string          `gorm:"type:text" json:"content"`
+	CreatedAt  time.Time       `json:"created_at"`
 }
 type AuditLog struct {
 	ID        uint      `gorm:"primaryKey" json:"id"`

@@ -13,6 +13,13 @@ paths:
     post: {summary: 创建患者}
   /api/v1/records:
     get: {summary: 多维病历检索}
-    post: {summary: 创建结构化病历}
+    post: {summary: 创建结构化病历（可携带 template_version_id 快照模板）}
+  /api/v1/templates:
+    get: {summary: 病历模板选项（每个模板的最新版本，供医生书写时选择）}
+  /api/v1/admin/templates:
+    get: {summary: 模板列表（含全部历史版本，管理员）}
+    post: {summary: 新建模板（首个内容即第 1 版，管理员）}
+  /api/v1/admin/templates/{id}:
+    put: {summary: 发布模板新版本（历史版本保留，管理员）}
   /api/v1/prescriptions:
     post: {summary: 开具电子处方}

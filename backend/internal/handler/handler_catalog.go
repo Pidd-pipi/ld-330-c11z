@@ -50,7 +50,7 @@ func (h *CatalogHandler) Diagnoses(c *gin.Context) {
 	OK(c, v)
 }
 func (h *CatalogHandler) CreateTemplate(c *gin.Context) {
-	var in dto.CatalogInput
+	var in dto.TemplateInput
 	if !bindJSON(c, &in) {
 		return
 	}
@@ -61,8 +61,37 @@ func (h *CatalogHandler) CreateTemplate(c *gin.Context) {
 	}
 	OK(c, v)
 }
+
+// UpdateTemplate 在既有模板上发布新版本，历史版本与已引用病历保持不变。
+func (h *CatalogHandler) UpdateTemplate(c *gin.Context) {
+	id, e := idParam(c)
+	if e != nil {
+		Fail(c, e)
+		return
+	}
+	var in dto.TemplateVersionInput
+	if !bindJSON(c, &in) {
+		return
+	}
+	v, e := h.s.PublishTemplateVersion(id, in)
+	if e != nil {
+		Fail(c, e)
+		return
+	}
+	OK(c, v)
+}
 func (h *CatalogHandler) Templates(c *gin.Context) {
 	v, e := h.s.Templates()
+	if e != nil {
+		Fail(c, e)
+		return
+	}
+	OK(c, v)
+}
+
+// TemplateOptions 供医生书写病历时选择，只返回每个模板的最新版本。
+func (h *CatalogHandler) TemplateOptions(c *gin.Context) {
+	v, e := h.s.TemplateOptions()
 	if e != nil {
 		Fail(c, e)
 		return

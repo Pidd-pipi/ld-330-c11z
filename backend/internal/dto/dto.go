@@ -1,5 +1,7 @@
 package dto
 
+import "time"
+
 type LoginRequest struct {
 	Username string `json:"username" validate:"required,min=3,max=64"`
 	Password string `json:"password" validate:"required,min=6,max=100"`
@@ -25,6 +27,9 @@ type RecordInput struct {
 	Diagnosis      string `json:"diagnosis" validate:"required"`
 	TreatmentPlan  string `json:"treatment_plan"`
 	RichContent    string `json:"rich_content"`
+	// TemplateVersionID 指向医生书写时选中的模板版本，保存时后端把该版本的
+	// 名称、版本号、内容快照进病历，归档后不受模板后续更新影响。
+	TemplateVersionID *uint `json:"template_version_id"`
 }
 type OrderInput struct {
 	MedicalRecordID uint   `json:"medical_record_id" validate:"required"`
@@ -61,4 +66,27 @@ type CatalogInput struct {
 	Code          string `json:"code"`
 	RecordType    string `json:"record_type"`
 	Content       string `json:"content"`
+}
+
+// TemplateInput 用于新建模板，首个内容即第 1 版。
+type TemplateInput struct {
+	Name       string `json:"name" validate:"required,max=128"`
+	RecordType string `json:"record_type" validate:"required,oneof=outpatient inpatient"`
+	Content    string `json:"content" validate:"required"`
+}
+
+// TemplateVersionInput 用于在既有模板上发布新版本，历史版本保持不变。
+type TemplateVersionInput struct {
+	Content string `json:"content" validate:"required"`
+}
+
+// TemplateView 是医生书写病历时看到的模板选项，只暴露最新一版。
+type TemplateView struct {
+	ID         uint      `json:"id"`
+	Name       string    `json:"name"`
+	RecordType string    `json:"record_type"`
+	VersionID  uint      `json:"version_id"`
+	Version    int       `json:"version"`
+	Content    string    `json:"content"`
+	UpdatedAt  time.Time `json:"updated_at"`
 }
